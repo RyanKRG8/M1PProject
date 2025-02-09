@@ -1,82 +1,95 @@
 #include <iostream>
-#include <random>
+#include <fstream>
+#include <iomanip>
 #include <string>
+
 using namespace std;
 
-// Function to get player's choice with input validation
-string getPlayerChoice() {
-    string choice;
-    while (true) {
-        cout << "Enter rock, paper, scissors, or quit: ";
-        cin >> choice;
+const int MAX_STUDENTS = 100;
+const int MAX_TESTS = 10;
 
-        for (char& c : choice) c = tolower(c);
+// Function protoypes
+int readData(ifstream& inFile, string names[], double scores[][MAX_TESTS], int& numTests);
+void calculateAverages(const double scores[][MAX_TESTS], double averages[], int numStudents, int numTests);
+char calculateLetterGrade(double average);
+void displayReport(const string names[], const double averages[], int numStudents);
 
-        if (choice == "rock" || choice == "paper" || choice == "scissors" || choice == "quit")
-            return choice;
-        cout << "That is not a valid choise. Please enter rock, paper, scissors, or quit.\n";
+int main() {
+    string names[MAX_STUDENTS];
+    double scores[MAX_STUDENTS][MAX_TESTS];
+    double averages[MAX_STUDENTS];
+    int numStudents = 0, numTests = 0;
+
+    ifstream inFile("StudentGrades.txt");
+
+    if (!inFile) {
+        cerr << "There was an error opening the StudentGrades.txt file. Please make sure a StudentGrades.txt file exists.";
+        return 1;
+    }
+
+    numStudents = readData(inFile, names, scores, numTests);
+    inFile.close();
+
+    calculateAverages(scores, averages, numStudents, numTests);
+    displayReport(names, averages, numStudents);
+
+    return 0;
+}
+
+// Function to read student names and test scores from a file
+int readData(ifstream& inFile, string names[], double scores[][MAX_TESTS], int& numTests) {
+    int studentCount = 0;
+
+    while (studentCount < MAX_STUDENTS && inFile >> names[studentCount]) {
+        int testIndex = 0;
+        double score;
+
+        while (testIndex < MAX_TESTS && inFile >> score) {
+            scores[studentCount][testIndex] = score;
+            testIndex++;
+        }
+
+        if (studentCount == 0) {
+            numTests = testIndex;
+        }
+
+        studentCount++;
+
+        inFile.clear();
+    }
+
+    return studentCount;
+}
+
+// Calculates the average scores
+void calculateAverages(const double scores[][MAX_TESTS], double averages[], int numStudents, int numTests) {
+    for (int i = 0; i < numStudents; i++) {
+        double sum = 0;
+        for (int j = 0; j < numTests; j++) {
+            sum += scores[i][j];
+        }
+        averages[i] = sum / numTests;
     }
 }
 
-// Function to get the computer's choice
-string getComputerChoice() {
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<int> dist(1, 3);
-
-    int num = dist(gen);
-    if (num == 1) return "rock";
-    if (num == 2) return "paper";
-    return "scissors";
-}
-
-// Function to determine the winner of a round
-string determineWinner(string playerChoice, string computerChoice) {
-    if (playerChoice == computerChoice) return "draw";
-    if ((playerChoice == "rock" && computerChoice == "scissors") ||
-        (playerChoice == "scissors" && computerChoice == "paper") ||
-        (playerChoice == "paper" && computerChoice == "rock"))
-        return "player";
-    return "computer";
-}
-
-// Function to update the scores
-void updateScores(string winner, int& playerScore, int& computerScore) {
-    if (winner == "player") playerScore++;
-    else if (winner == "computer") computerScore++;
+// Function to get the letter grade based off score
+char calculateLetterGrade(double average) {
+    if (average >= 90) return 'A';
+    if (average >= 80) return 'B';
+    if (average >= 70) return 'C';
+    if (average >= 60) return 'D';
+    return 'F';
 }
 
 // Function to display the results
-void displayFinalResults(int playerScore, int computerScore) {
-    cout << "\n=-=-= Game Over =-=-=\n";
-    cout << "Final Score - You: " << playerScore << " | Computer: " << computerScore << "\n";
+void displayReport(const string names[], const double averages[], int numStudents) {
+    cout << "TEST GRADE REPORT\n";
+    cout << left << setw(15) << "Name" << setw(10) << "Average" << setw(10) << "Grade" << endl;
+    cout << "----------------------------------\n";
 
-    if (playerScore > computerScore) cout << "You win the game!\n";
-    else if (playerScore < computerScore) cout << "The Computer wins the game!\n";
-    else cout << "It's a draw!\n";
-}
-
-// Main game
-int main() {
-    int playerScore = 0, computerScore = 0;
-
-    while (true) {
-        string playerChoice = getPlayerChoice();
-        if (playerChoice == "quit") break;
-
-        string computerChoice = getComputerChoice();
-        cout << "Computer chose: " << computerChoice << "\n";
-
-        string winner = determineWinner(playerChoice, computerChoice);
-        if (winner == "draw") cout << "It's a draw!\n";
-        else if (winner == "player") cout << "You win this round!\n";
-        else cout << "The Computer wins this round!\n";
-
-        updateScores(winner, playerScore, computerScore);
-        cout << "Current Score - You: " << playerScore << " | Computer: " << computerScore << "\n\n";
+    for (int i = 0; i < numStudents; i++) {
+        cout << left << setw(15) << names[i]
+            << setw(10) << fixed << setprecision(2) << averages[i]
+            << setw(10) << calculateLetterGrade(averages[i]) << endl;
     }
-
-    displayFinalResults(playerScore, computerScore);
-    cout << "Thank you for playing Rock, Paper, Scissors!\n";
-    return 0;
 }
